@@ -1,10 +1,9 @@
-import xlrd
-import xlsxwriter
-from docx import Document
-
-from table import Table
 import tkinter as tk
 from tkinter import filedialog
+
+import xlsxwriter
+from docx import Document
+from table import Table
 
 root = tk.Tk()
 root.withdraw()
@@ -15,7 +14,9 @@ doc = Document(file_path)
 
 # 设置保存文件的路径
 if doc != -1:
-    save_path = filedialog.asksaveasfilename(title=u'保存文件', filetypes=[("Excel工作簿", ".xlsx")], defaultextension=".xlsx")
+    save_path = filedialog.asksaveasfilename(title=u'保存文件',
+                                             filetypes=[("Excel工作簿", ".xlsx")],
+                                             defaultextension=".xlsx")
     workbook = xlsxwriter.Workbook(save_path)
 tableList = []
 
@@ -60,13 +61,22 @@ for table in doc.tables:
             t.headName = cells[0].text
             # originalName = t.headName
             t.tableName = t.headName.replace("Example:", "").lstrip(" \n")
-            if t.headName.find("Example:") == -1 or t.tableName.find("+RESP:") == -1:
+            if t.headName.find("Example:") != -1:
+                if t.tableName.find("+RESP:") != -1:
+                    separator_Num1 = t.tableName.find(':')
+                    separator_Num2 = t.tableName.find(',')
+                    t.tableName = t.tableName[separator_Num1 + 1:separator_Num2]
+                elif t.tableName.find("+ACK:") != -1:
+                    separator_Num1 = t.tableName.find('+')
+                    separator_Num2 = t.tableName.find(',')
+                    t.tableName = t.tableName[separator_Num1:separator_Num2]
+                    t.tableName = t.tableName.replace(":", "-")
+                else:
+                    validateTable = False
+                    break
+            else:
                 validateTable = False
                 break
-            separator_Num1 = t.tableName.find(':')
-            separator_Num2 = t.tableName.find(',')
-            t.tableName = t.tableName[separator_Num1 + 1:separator_Num2]
-
             # t.tableName = t.tableName.replace(":", "-")
             try:
                 worksheet = workbook.add_worksheet(t.tableName)
@@ -79,12 +89,11 @@ for table in doc.tables:
             colTitle = []
             for colNum, c in enumerate(cells):
                 colTitle.append(c.text)
-                worksheet.write(row_index, colNum, c.text)
+                worksheet.write_string(row_index, colNum, c.text)
                 # worksheet.set_row(i,  table_content_format2)
             t.colName = colTitle
             # for colNum, c in enumerate(t.colName):
             #     worksheet.write(i, colNum, c)
-
         else:
             row = []
             for colNum, c in enumerate(cells):
@@ -106,7 +115,7 @@ for table in doc.tables:
                     contentW = ' ' + contentW
                 row.append(contentW)
                 # content = c.text if not c.text.startswith('\'') else '\''+c.text
-                worksheet.write(row_index, colNum, contentW)
+                worksheet.write_string(row_index, colNum, contentW)
                 worksheet.set_row(row_index, 25, table_content_format1)
             listRow.append(row)
             worksheet.set_column('A:A', 20)

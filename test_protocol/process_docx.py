@@ -1,6 +1,5 @@
 import os
 
-import xlsxwriter
 from docx import Document
 from xlsxwriter import Workbook
 
@@ -42,24 +41,20 @@ def init_format(workbook=None):
 
 
 def process_table_name(t: Table, cells):
-    t.headName = cells[0].text
-    t.tableName = t.headName.replace("Example:", "").lstrip(" \n")
-    if t.headName.find("Example:") != -1:
+    t.headerName = cells[0].text
+    t.tableName = t.headerName.replace("Example:", "").lstrip(" \n")
+    if t.headerName.find("Example:") != -1:
         if t.tableName.find("+RESP:") != -1:
             separator_num1 = t.tableName.find(':')
             separator_num2 = t.tableName.find(',')
             t.tableName = t.tableName[separator_num1 + 1:separator_num2]
             return True
         elif t.tableName.find("+ACK:") != -1:
-            separator_num1 = t.tableName.find('+')
             separator_num2 = t.tableName.find(',')
-            t.tableName = t.tableName[separator_num1:separator_num2]
+            t.tableName = t.tableName[separator_num2 - 3:separator_num2]
             t.tableName = t.tableName.replace(":", "-")
             return True
-        else:
-            return False
-    else:
-        return False
+    return False
 
 
 def process_table_table_header(t: Table, cells):
@@ -115,8 +110,62 @@ def process_docx_table(docx: Document, table_list):
             table_list.append(t)
 
 
+def print_list(table_list: [Table]):
+    print("长度：", str(len(table_list)))
+    for t in table_list:
+        print(t.tableName)
+
+
+# 获取列表的第二个元素
+def table_name_compare(t: Table):
+    return t.tableName
+
+
 # 去除名称相同的表
-# def delete_repetition_table_name():
+def delete_repetition_table_name(table_list):
+    result = sorted(table_list, key=lambda item: item.tableName)
+    print_list(result)
+    print("====================================")
+    pre_t = None
+    for t in result:
+        if pre_t and t.tableName == pre_t.tableName:
+            table_list.remove(t)
+        else:
+            pre_t = t
+    print_list(table_list)
+
+
+# 去除内容相同的表
+def delete_repetition_table_content(table_list: [Table]):
+    length = len(table_list)
+    for i in range(0, length):
+        a = table_list[i]
+        if a.tableName.startswith("GT") or a.deleted:
+            continue
+        for j in range(i + 1, length):
+            b = table_list[j]
+            rows_a = len(a.body)
+            rows_b = len(b.body)
+            if b.tableName.startswith("GT") or rows_a != rows_b:
+                continue
+            equality = True
+            for r in range(0, rows_a):
+                if a.body[r][0] != b.body[r][0]:
+                    equality = False
+                    break
+            if equality:
+                a.headerName.join(b.headerName)
+                b.deleted = True
+    i = 0
+    while i < length:
+        deleted = table_list[i]
+        if deleted.deleted:
+            table_list.remove(deleted)
+            length -= 1
+            continue
+        i += 1
+    print("====================================")
+    print_list(table_list)
 
 
 def process_docx(docx_path=None):
@@ -129,12 +178,11 @@ def process_docx(docx_path=None):
     doc = Document(docx_path)
     table_list = []
     process_docx_table(doc, table_list)
-    for t in table_list:
-        print(t.tableName)
-
+    delete_repetition_table_name(table_list)
+    delete_repetition_table_content(table_list)
 
     # workbook = xlsxwriter.Workbook(docx_path)
     # init_format(workbook)
 
 
-process_docx("../data/doc/GV500MA @Track Air Interface Protocol (2).docx")
+process_docx("../data/doc/test_data.docx")

@@ -3,6 +3,9 @@ class Table:
     colName = ['Parameter', 'Length (Byte)', 'Range/Format', 'Default']
     body = [[]]
 
+    def __init__(self):
+        self.deleted = False
+
     def tostring(self):
         print("\033[0;35;0m                " + self.tableName + "\033[0m")
         print("===========================================")

@@ -116,11 +116,6 @@ def print_list(table_list: [Table]):
         print(t.tableName)
 
 
-# 获取列表的第二个元素
-def table_name_compare(t: Table):
-    return t.tableName
-
-
 # 去除名称相同的表
 def delete_repetition_table_name(table_list):
     result = sorted(table_list, key=lambda item: item.tableName)

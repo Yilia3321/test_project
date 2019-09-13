@@ -5,6 +5,7 @@ class Table:
 
     def __init__(self):
         self.deleted = False
+        self.command_format_list = []
 
     def tostring(self):
         print("\033[0;35;0m                " + self.tableName + "\033[0m")

@@ -1,9 +1,12 @@
 import os
+from tkinter import filedialog
 
+import xlsxwriter
 from docx import Document
+from table import Table
 from xlsxwriter import Workbook
 
-from test_protocol.table import Table
+save_path = filedialog.asksaveasfilename(title=u'保存文件', filetypes=[("Excel工作簿", ".xlsx")], defaultextension=".xlsx")
 
 tableList = []
 
@@ -35,13 +38,20 @@ def init_format(workbook=None):
     global table_content_format2
     table_content_format2 = workbook.add_format({
         'font_name': 'Arial',
-        'color': '#633333',
+        # 'color': '#633333',
         'valign': 'vcenter',  # 垂直居中
     })
 
 
 def process_table_name(t: Table, cells):
     t.headerName = cells[0].text
+    # 第一行 Example:
+    t.command_format_list.append(t.headerName[0:t.headerName.find("\n")])
+    command = t.headerName.replace("Example:", "").lstrip(" \n")
+    n = command.count('$')
+    t.command_format_list.extend(command.split('$', n - 1))
+    t.command_format_list = [one.strip() for one in t.command_format_list]
+
     t.tableName = t.headerName.replace("Example:", "").lstrip(" \n")
     if t.headerName.find("Example:") != -1:
         if t.tableName.find("+RESP:") != -1:
@@ -52,7 +62,7 @@ def process_table_name(t: Table, cells):
         elif t.tableName.find("+ACK:") != -1:
             separator_num2 = t.tableName.find(',')
             t.tableName = t.tableName[separator_num2 - 3:separator_num2]
-            t.tableName = t.tableName.replace(":", "-")
+            # t.tableName = t.tableName.replace(":", "-")
             return True
     return False
 
@@ -149,7 +159,7 @@ def delete_repetition_table_content(table_list: [Table]):
                     equality = False
                     break
             if equality:
-                a.headerName.join(b.headerName)
+                a.command_format_list = a.command_format_list + b.command_format_list[1:]
                 b.deleted = True
     i = 0
     while i < length:
@@ -176,8 +186,31 @@ def process_docx(docx_path=None):
     delete_repetition_table_name(table_list)
     delete_repetition_table_content(table_list)
 
-    # workbook = xlsxwriter.Workbook(docx_path)
-    # init_format(workbook)
+    workbook = xlsxwriter.Workbook(save_path)
+    init_format(workbook)
+    for st in table_list:
+        worksheet = workbook.add_worksheet(st.tableName)
+        worksheet.set_column('A:A', 20, table_content_format1)
+        worksheet.set_column('B:B', 15, table_content_format1)
+        worksheet.set_column('C:C', 40, table_content_format1)
+        worksheet.set_column('D:D', 10, table_content_format1)
+        row_index = 0
+        for index, value in enumerate(st.command_format_list):
+            worksheet.merge_range(index, 0, index, 3, value, table_title_format)
+            worksheet.set_row(index, 25)
+            row_index = index
+        col_index = 0
+        row_index += 1
+        for bt in Table.colName:
+            worksheet.write(row_index, col_index, bt)
+            col_index += 1
+        for row in st.body:
+            row_index += 1
+            col_index = 0
+            for cell in row:
+                worksheet.write(row_index, col_index, cell)
+                col_index += 1
+    workbook.close()
 
 
-process_docx("../data/doc/test_data.docx")
+process_docx("E:\PycharmProjects\TestAll\data\doc\GV500MA.docx")
